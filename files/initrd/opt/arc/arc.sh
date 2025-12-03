@@ -134,9 +134,6 @@ elif [ "${ARC_MODE}" = "config" ]; then
           GOVERNOR="$(readConfigKey "governor" "${USER_CONFIG_FILE}")"
           write_menu_value "g" "Scaling Governor" "${GOVERNOR:-performance}"
         fi
-        if echo "${addons_list}" | grep -q "storagepanel"; then
-          write_menu_value "P" "StoragePanel" "${STORAGEPANEL:-auto}"
-        fi
 
         if [ "${PLATFORM}" = "epyc7002" ] && [ "${PRODUCTVER}" = "7.2" ]; then
           write_menu_value "K" "Kernel" "${KERNEL}"

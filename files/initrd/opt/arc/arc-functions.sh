@@ -1325,38 +1325,6 @@ function keymapMenu() {
 }
 
 ###############################################################################
-# Shows storagepanel menu to user
-function storagepanelMenu() {
-  CONFDONE="$(readConfigKey "arc.confdone" "${USER_CONFIG_FILE}")"
-  if [ "${CONFDONE}" = "true" ]; then
-    while true; do
-      STORAGEPANELUSER="$(readConfigKey "addons.storagepanel" "${USER_CONFIG_FILE}")"
-      [ -n "${STORAGEPANELUSER}" ] && DISKPANELUSER="$(echo ${STORAGEPANELUSER} | cut -d' ' -f1)" || DISKPANELUSER="RACK_24_Bay"
-      [ -n "${STORAGEPANELUSER}" ] && M2PANELUSER="$(echo ${STORAGEPANELUSER} | cut -d' ' -f2)" || M2PANELUSER="1X4"
-      ITEMS="$(echo -e "RACK_0_Bay \nRACK_2_Bay \nRACK_4_Bay \nRACK_8_Bay \nRACK_10_Bay \nRACK_12_Bay \nRACK_12_Bay_2 \nRACK_16_Bay \nRACK_20_Bay \nRACK_24_Bay \nRACK_60_Bay \nTOWER_1_Bay \nTOWER_2_Bay \nTOWER_4_Bay \nTOWER_4_Bay_J \nTOWER_4_Bay_S \nTOWER_5_Bay \nTOWER_6_Bay \nTOWER_8_Bay \nTOWER_12_Bay \n")"
-      dialog --backtitle "$(backtitle)" --title "StoragePanel" \
-        --default-item "${DISKPANELUSER}" --no-items --menu "Choose a Disk Panel" 0 0 0 ${ITEMS} \
-        2>"${TMP_PATH}/resp"
-      resp="$(cat "${TMP_PATH}/resp" 2>/dev/null)"
-      [ -z "${resp}" ] && break
-      STORAGE=${resp}
-      ITEMS="$(echo -e "1X1 \n1X2 \n1X3 \n1X4 \n1X6 \n1X8 \n2X2 \n2X3 \n2X4 \n2X6 \n2X8 \n3X4 \n4X4 \n")"
-      dialog --backtitle "$(backtitle)" --title "StoragePanel" \
-        --default-item "${M2PANELUSER}" --no-items --menu "Choose a M.2 Panel" 0 0 0 ${ITEMS} \
-        2>"${TMP_PATH}/resp"
-      resp="$(cat "${TMP_PATH}/resp" 2>/dev/null)"
-      [ -z "${resp}" ] && break
-      M2PANEL=${resp}
-      STORAGEPANEL="${STORAGE} ${M2PANEL}"
-      writeConfigKey "addons.storagepanel" "${STORAGEPANEL}" "${USER_CONFIG_FILE}"
-      break
-    done
-    resetBuildstatus
-  fi
-  return
-}
-
-###############################################################################
 # Shows backup menu to user
 function backupMenu() {
   NEXT="1"

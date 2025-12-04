@@ -60,7 +60,8 @@ SMALLNUM="$(readConfigKey "smallnum" "${USER_CONFIG_FILE}")"
 KERNEL="$(readConfigKey "kernel" "${USER_CONFIG_FILE}")"
 KVER="$(readConfigKey "platforms.${PLATFORM}.productvers.\"${PRODUCTVER}\".kver" "${P_FILE}")"
 CPU="$(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2 | sed -E 's/@ [0-9.]+[[:space:]]*GHz//g' | sed -E 's/ CPU//g' | sed -E 's/^[[:space:]]*//')"
-CPUCNT="$(cat /sys/devices/system/cpu/cpu[0-9]*/topology/{core_cpus_list,thread_siblings_list} | sort -u | wc -l)"
+CPUCNT="$(cat /sys/devices/system/cpu/cpu[0-9]*/topology/{core_cpus_list,thread_siblings_list} | sort -u | wc -l 2>/dev/null)"
+CPUCHT="$(cat /proc/cpuinfo | grep -c 'core id' 2>/dev/null)"
 RAMTOTAL="$(awk '/MemTotal:/ {printf "%.0f\n", $2 / 1024 / 1024 + 0.5}' /proc/meminfo 2>/dev/null)"
 BOARD="$(getBoardName)"
 MEV="$(virt-what 2>/dev/null | head -1)"
@@ -98,7 +99,7 @@ if [ "${DSMINFO}" = "true" ]; then
 fi
 if [ "${SYSTEMINFO}" = "true" ]; then
   echo -e "\033[1;34mSystem\033[0m"
-  echo -e "CPU: \033[1;37m${CPU} (${CPUCNT} cores)\033[0m"
+  echo -e "CPU: \033[1;37m${CPU} (Cores: ${CPUCNT} Threads: ${CPUCHT})\033[0m"
   echo -e "Board: \033[1;37m${BOARD}\033[0m"
   echo -e "Memory: \033[1;37m${RAMTOTAL}GB\033[0m"
   echo -e "Governor: \033[1;37m${GOVERNOR:-performance}\033[0m"

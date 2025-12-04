@@ -84,13 +84,13 @@ function arcModel() {
           fi
           [ -z "$(grep -w "${M}" "${S_FILE}")" ] && COMPATIBLE=0
           [ -z "$(grep -w "${A}" "${P_FILE}")" ] && COMPATIBLE=0
-          if [ "${CPUCNT:-0}" -gt "${PLTCNT:-0}" ]; then
+          if [ "${CPUCHT:-0}" -gt "${PLTCNT:-0}" ]; then
             if [ "${M}" = "SA6400" ]; then
               PLTCNT="128"
-              echo -e "${WARN}- CPU count (${CPUCNT}) exceeds platform count (${PLTCNT})\nYou need to enable the custom kernel\n" >>"${TMP_PATH}/${M}_warn"
+              echo -e "${WARN}- CPU Threads count (${CPUCHT}) exceeds platform count (${PLTCNT})\nYou need to enable the custom kernel\n" >>"${TMP_PATH}/${M}_warn"
             else
               COMPATIBLE=0
-              echo -e "${WARN}- CPU count (${CPUCNT}) exceeds platform count (${PLTCNT})\n" >>"${TMP_PATH}/${M}_warn"
+              echo -e "${WARN}- CPU Threads count (${CPUCHT}) exceeds platform count (${PLTCNT})\n" >>"${TMP_PATH}/${M}_warn"
             fi
           fi
           if [ "${M}" != "SA6400" ] && [ "${MEV}" = "hyperv" ]; then
@@ -1621,7 +1621,8 @@ function sysinfo() {
   [ -d /sys/firmware/efi ] && BOOTSYS="UEFI" || BOOTSYS="BIOS"
   USERID="$(readConfigKey "arc.userid" "${USER_CONFIG_FILE}")"
   CPU="$(cat /proc/cpuinfo 2>/dev/null | grep 'model name' | uniq | awk -F':' '{print $2}')"
-  CPUCNT="$(cat /sys/devices/system/cpu/cpu[0-9]*/topology/{core_cpus_list,thread_siblings_list} | sort -u | wc -l)"
+  CPUCNT="$(cat /sys/devices/system/cpu/cpu[0-9]*/topology/{core_cpus_list,thread_siblings_list} | sort -u | wc -l 2>/dev/null)"
+  CPUCHT="$(cat /proc/cpuinfo | grep -c 'core id' 2>/dev/null)"
   BOARD="$(getBoardName)"
   RAMTOTAL="$(awk '/MemTotal:/ {printf "%.0f\n", $2 / 1024 / 1024 + 0.5}' /proc/meminfo 2>/dev/null)"
   [ -z "${RAMTOTAL}" ] && RAMTOTAL="N/A"
@@ -1683,7 +1684,7 @@ function sysinfo() {
   TEXT="\n\Z4> System: ${MEV} | ${BOOTSYS} | ${BUS}\Zn"
   TEXT+="\n"
   TEXT+="\n  Board: \Zb${BOARD}\Zn"
-  TEXT+="\n  CPU: \Zb${CPU} (${CPUCNT} cores)\Zn"
+  TEXT+="\n  CPU: \Zb${CPU} (Cores: ${CPUCNT} Threads: ${CPUCHT})\Zn"
   if [ $(lspci -d ::300 | wc -l) -gt 0 ]; then
     GPUNAME=""
     for PCI in $(lspci -d ::300 | awk '{print $1}'); do

@@ -175,7 +175,10 @@ else
 fi
 
 # DSM Cmdline
-if [ "${KVER:0:1}" -lt "5" ]; then
+if [ -z "${KVER}" ]; then
+  echo "Error: DSM ${PRODUCTVER} on ${PLATFORM} is not supported."
+  exit 1
+elif [ -n "${KVER}" ] && [ "${KVER:0:1}" -lt "5" ]; then
   if [ "${BUS}" != "usb" ]; then
     SZ=$(blockdev --getsz "${LOADER_DISK}" 2>/dev/null) # SZ=$(cat /sys/block/${LOADER_DISK/\/dev\//}/size)
     SS=$(blockdev --getss "${LOADER_DISK}" 2>/dev/null) # SS=$(cat /sys/block/${LOADER_DISK/\/dev\//}/queue/hw_sector_size)

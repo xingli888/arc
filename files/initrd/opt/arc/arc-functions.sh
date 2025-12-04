@@ -19,6 +19,7 @@ function arcModel() {
       echo "${M} ${P}" >>"${TMP_PATH}/modellist"
     done < <(echo "${PM}")
   done < <(echo "${PS}")
+
   if [ "${ARC_MODE}" = "config" ]; then
     while true; do
       echo -n "" >"${TMP_PATH}/menu"
@@ -75,7 +76,10 @@ function arcModel() {
           if [ "${DT}" = "true" ]; then
             WARN="" && rm -f "${TMP_PATH}/${M}_warn"
             if [[ "${SCSICONTROLLER}" -ge 1 || "${RAIDCONTROLLER}" -ge 1 ]]; then
-              echo -e "${WARN}- DT Model selected: Raid/SCSI will not work\n" >>"${TMP_PATH}/${M}_warn"
+              echo -e "${WARN}- DT Model selected: Raid/SCSI is not supported\n" >>"${TMP_PATH}/${M}_warn"
+            fi
+            if [ "${SASCONTROLLER}" -ge 1 ]; then
+              echo -e "${WARN}- DT Model selected: HBA/SAS is experimental supported\n" >>"${TMP_PATH}/${M}_warn"
             fi
           fi
           [ -z "$(grep -w "${M}" "${S_FILE}")" ] && COMPATIBLE=0
@@ -83,6 +87,7 @@ function arcModel() {
           if [ "${CPUCNT:-0}" -gt "${PLTCNT:-0}" ]; then
             if [ "${M}" = "SA6400" ]; then
               PLTCNT="128"
+              echo -e "${WARN}- CPU count (${CPUCNT}) exceeds platform count (${PLTCNT})\nYou need to enable the custom kernel\n" >>"${TMP_PATH}/${M}_warn"
             else
               COMPATIBLE=0
               echo -e "${WARN}- CPU count (${CPUCNT}) exceeds platform count (${PLTCNT})\n" >>"${TMP_PATH}/${M}_warn"
@@ -102,12 +107,12 @@ function arcModel() {
           fi
         fi
         [ -n "$(grep -w "${M}" "${S_FILE}")" ] && BETA="Loader" || BETA="Syno"
-        [ "${COMPATIBLE}" -eq 1 ] && echo -e "${M} \"\t$(printf "\Zb%-15s\Zn \Zb%-8s\Zn \Zb%-3s\Zn \Zb%-4s\Zn \Zb%-8s\Zn \Zb%-4s\Zn \Zb%-4s\Zn \Zb%-10s\Zn \Zb%-12s\Zn \Zb%-10s\Zn \Zb%-7s\Zn" "${A}" "${KVERM}" "${DTS}" "${ARC}" "${PLTCNT}" "${IGPUS}" "${HBAS}" "${M_2_CACHE}" "${M_2_STORAGE}" "${USBS}" "${BETA}")\" ">>"${TMP_PATH}/menu"
+        [ "${COMPATIBLE}" -eq "1" ] && echo -e "${M} \"\t$(printf "\Zb%-15s\Zn \Zb%-8s\Zn \Zb%-3s\Zn \Zb%-4s\Zn \Zb%-8s\Zn \Zb%-4s\Zn \Zb%-4s\Zn \Zb%-10s\Zn \Zb%-12s\Zn \Zb%-10s\Zn \Zb%-7s\Zn" "${A}" "${KVERM}" "${DTS}" "${ARC}" "${PLTCNT}" "${IGPUS}" "${HBAS}" "${M_2_CACHE}" "${M_2_STORAGE}" "${USBS}" "${BETA}")\" ">>"${TMP_PATH}/menu"
       done < <(cat "${TMP_PATH}/modellist")
       [ ! -s "${TMP_PATH}/menu" ] && echo "No supported Models found." >"${TMP_PATH}/menu"
-      [ "${RESTRICT}" -eq 1 ] && TITLEMSG="Supported Models/Platforms for your Hardware" || TITLEMSG="All Models/Platforms"
+      [ "${RESTRICT}" -eq "1" ] && TITLEMSG="Supported Models/Platforms for your Hardware" || TITLEMSG="All Models/Platforms"
       MSG="${TITLEMSG} | Features: \Z4x = supported\Zn / \Z1+ = need Addon\Zn\n$(printf "\Zb%-16s\Zn \Zb%-15s\Zn \Zb%-8s\Zn \Zb%-3s\Zn \Zb%-4s\Zn \Zb%-8s\Zn \Zb%-4s\Zn \Zb%-4s\Zn \Zb%-10s\Zn \Zb%-12s\Zn \Zb%-10s\Zn \Zb%-7s\Zn" "Model" "Platform" "Kernel" "DT" "Arc" "Threads" "iGPU" "HBA" "M.2 Cache" "M.2 Volume" "USB Mount" "Source")"
-      [ "${RESTRICT}" -eq 1 ] && SHOWMSG="Show all" || SHOWMSG="Show supported"
+      [ "${RESTRICT}" -eq "1" ] && SHOWMSG="Show all" || SHOWMSG="Show supported"
       dialog --backtitle "$(backtitle)" --title "DSM Model" --colors \
         --cancel-label "${SHOWMSG}" --help-button --help-label "Exit" \
         --menu "${MSG}" 0 128 0 \
@@ -115,10 +120,10 @@ function arcModel() {
       RET=$?
       case ${RET} in
         0)
-          RESP="$(cat "${TMP_PATH}/resp" 2>/dev/null)"
-          [ -z "${RESP}" ] && return
-          if [ -s "${TMP_PATH}/${RESP}_warn" ]; then
-            MSG="Your Hardware is not compatible with the selected Model!\n\n\Z1$(cat "${TMP_PATH}/${RESP}_warn")\Zn\n\nDo you still want to proceed?"
+          resp="$(cat "${TMP_PATH}/resp" 2>/dev/null)"
+          [ -z "${resp}" ] && return
+          if [ -s "${TMP_PATH}/${resp}_warn" ]; then
+            MSG="Your Hardware is not compatible with the selected Model!\n\n\Z1$(cat "${TMP_PATH}/${resp}_warn")\Zn\n\nDo you still want to proceed?"
             dialog --backtitle "$(backtitle)" --title "Arc Warning" --colors \
               --yesno "${MSG}" 0 0
             RET=$?
@@ -133,14 +138,14 @@ function arcModel() {
           [ "${RESTRICT}" -eq 1 ] && RESTRICT=0 || RESTRICT=1
           ;;
         *)
-          return 
           break
           ;;
       esac
     done
   fi
-  if [ "${ARC_MODE}" = "config" ] && [ "${MODEL}" != "${RESP}" ]; then
-    MODEL="${RESP}"
+
+  if [ "${ARC_MODE}" = "config" ] && [ "${MODEL}" != "${resp}" ]; then
+    MODEL="${resp}"
     writeConfigKey "addons" "{}" "${USER_CONFIG_FILE}"
     writeConfigKey "arc.confdone" "false" "${USER_CONFIG_FILE}"
     writeConfigKey "arc.remap" "" "${USER_CONFIG_FILE}"
@@ -161,15 +166,11 @@ function arcModel() {
     writeConfigKey "smallnum" "" "${USER_CONFIG_FILE}"
     writeConfigKey "sn" "" "${USER_CONFIG_FILE}"
     writeConfigKey "zimage-hash" "" "${USER_CONFIG_FILE}"
-    if [ "${MODEL}" = "SA6400" ]; then
-      PLTCNT="$(readConfigKey "platforms.${PLATFORM}.ccnt" "${P_FILE}")"
-      if [ "${CPUCNT:-0}" -gt "${PLTCNT:-0}" ] || [ "${MEV}" = "hyperv" ]; then
-        writeConfigKey "kernel" "custom" "${USER_CONFIG_FILE}"
-      fi
-    fi
     rm -f "${ORI_ZIMAGE_FILE}" "${ORI_RDGZ_FILE}" "${MOD_ZIMAGE_FILE}" "${MOD_RDGZ_FILE}" >/dev/null 2>&1 || true
   fi
+
   resetBuildstatus
+
   PLATFORM="$(grep -w "${MODEL}" "${TMP_PATH}/modellist" | awk '{print $2}' | head -1)"
   writeConfigKey "platform" "${PLATFORM}" "${USER_CONFIG_FILE}"
   ARC_PATCH="$(readConfigKey "arc.patch" "${USER_CONFIG_FILE}")"
@@ -179,7 +180,6 @@ function arcModel() {
   KERNEL="$(readConfigKey "kernel" "${USER_CONFIG_FILE}")"
   ODP="$(readConfigKey "odp" "${USER_CONFIG_FILE}")"
   arcVersion
-  return
 }
 
 ###############################################################################
@@ -191,28 +191,23 @@ function arcVersion() {
   PRODUCTVER="$(readConfigKey "productver" "${USER_CONFIG_FILE}")"
   PAT_URL="$(readConfigKey "paturl" "${USER_CONFIG_FILE}")"
   PAT_HASH="$(readConfigKey "pathash" "${USER_CONFIG_FILE}")"
-  arc_mode
 
   if [ "${ARC_MODE}" = "config" ] && [ "${ARCRESTORE}" != "true" ]; then
     CVS="$(readConfigEntriesArray "platforms.${PLATFORM}.productvers" "${P_FILE}")"
     PVS="$(readConfigEntriesArray "${PLATFORM}.\"${MODEL}\"" "${D_FILE}")"
     LVS=""
-      for V in $(echo "${PVS}" | sort -r); do
-      BASE_BUILD="${V%-*}"
-      if ! [[ " ${UNIQUE_BUILDS[*]} " =~ " ${BASE_BUILD} " ]]; then
-        if echo "${CVS}" | grep -qx "${V:0:3}"; then
-          UNIQUE_BUILDS+=("${BASE_BUILD}")
-          LVS="${LVS}${V} "$'\n'
-        fi
+    for V in $(echo "${PVS}" | sort -r); do
+      if echo "${CVS}" | grep -qx "${V:0:3}"; then
+        LVS="${LVS}${V} "$'\n'
       fi
     done
+
     dialog --clear --no-items --nocancel --title "DSM Version" --backtitle "$(backtitle)" \
-      --no-items --menu "Select DSM Version" 7 30 0 ${LVS} \
-    2>"${TMP_PATH}/resp"
+      --no-items --menu "Select DSM Version" 7 30 0 ${LVS} 2>"${TMP_PATH}/resp"
     [ $? -ne 0 ] && return 1
-    RESP="$(cat "${TMP_PATH}/resp" 2>/dev/null)"
-    if [ "${PRODUCTVER}" != "${RESP:0:3}" ]; then
-      PRODUCTVER="${RESP:0:3}"
+    resp="$(cat "${TMP_PATH}/resp" 2>/dev/null)"
+    if [ "${PRODUCTVER}" != "${resp:0:3}" ]; then
+      PRODUCTVER="${resp:0:3}"
       rm -f "${ORI_ZIMAGE_FILE}" "${ORI_RDGZ_FILE}" "${MOD_ZIMAGE_FILE}" "${MOD_RDGZ_FILE}" >/dev/null 2>&1 || true
     fi
 
@@ -222,8 +217,8 @@ function arcVersion() {
     writeConfigKey "ramdisk-hash" "" "${USER_CONFIG_FILE}"
     writeConfigKey "zimage-hash" "" "${USER_CONFIG_FILE}"
 
-    PAT_URL_UPDATE="$(readConfigKey "${PLATFORM}.\"${MODEL}\".\"${RESP}\".url" "${D_FILE}")"
-    PAT_HASH_UPDATE="$(readConfigKey "${PLATFORM}.\"${MODEL}\".\"${RESP}\".hash" "${D_FILE}")"
+    PAT_URL_UPDATE="$(readConfigKey "${PLATFORM}.\"${MODEL}\".\"${resp}\".url" "${D_FILE}")"
+    PAT_HASH_UPDATE="$(readConfigKey "${PLATFORM}.\"${MODEL}\".\"${resp}\".hash" "${D_FILE}")"
 
     if [ "${PAT_URL}" != "${PAT_URL_UPDATE}" ] || [ "${PAT_HASH}" != "${PAT_HASH_UPDATE}" ]; then
       PAT_URL="${PAT_URL_UPDATE}"
@@ -1688,7 +1683,7 @@ function sysinfo() {
   TEXT="\n\Z4> System: ${MEV} | ${BOOTSYS} | ${BUS}\Zn"
   TEXT+="\n"
   TEXT+="\n  Board: \Zb${BOARD}\Zn"
-  TEXT+="\n  CPU: \Zb${CPU} (${CPUCNT} threads)\Zn"
+  TEXT+="\n  CPU: \Zb${CPU} (${CPUCNT} cores)\Zn"
   if [ $(lspci -d ::300 | wc -l) -gt 0 ]; then
     GPUNAME=""
     for PCI in $(lspci -d ::300 | awk '{print $1}'); do
@@ -3860,10 +3855,10 @@ function cleanDSMRoot() {
       return
     fi
     if [ -d "${TMP_PATH}/mdX/etc" ]; then
-      for DIR in "@autoupdate" "upd@te" ".log.junior"; do
-        PATH="${TMP_PATH}/mdX/${DIR}/*"
-        if ls ${PATH} 1>/dev/null 2>&1; then
-          rm -rf ${TMP_PATH}/mdX/${DIR}/*
+      for CDIR in "@autoupdate" "upd@te" ".log.junior"; do
+        CPATH="${TMP_PATH}/mdX/${CDIR}/*"
+        if ls "${CPATH}" 2>/dev/null; then
+          rm -rf "${TMP_PATH}/mdX/${CDIR}/"* 2>/dev/null
           CLEAN=1
         fi
       done

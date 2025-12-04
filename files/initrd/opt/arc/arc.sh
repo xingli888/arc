@@ -57,6 +57,7 @@ function backtitle() {
   BACKTITLE+="Build: $( [ "${BUILDDONE}" = "true" ] && echo "yes" || echo "no" ) | "
   BACKTITLE+="Boot: ${MEV} (${BUS}) | "
   BACKTITLE+="KB: ${KEYMAP}"
+  arc_mode
   echo "${BACKTITLE}"
 }
 

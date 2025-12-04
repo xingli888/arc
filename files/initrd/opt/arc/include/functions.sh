@@ -36,8 +36,6 @@ function arc_mode() {
     ARC_MODE="reinstall"
   elif grep -q "recovery" /proc/cmdline; then
     ARC_MODE="recovery"
-  elif [ -f "/usr/arc/.mountloader" ]; then
-    ARC_MODE="config"
   else
     ARC_MODE="dsm"
   fi

@@ -98,7 +98,7 @@ if [ "${DSMINFO}" = "true" ]; then
 fi
 if [ "${SYSTEMINFO}" = "true" ]; then
   echo -e "\033[1;34mSystem\033[0m"
-  echo -e "CPU: \033[1;37m${CPU} (${CPUCNT} threads)\033[0m"
+  echo -e "CPU: \033[1;37m${CPU} (${CPUCNT} cores)\033[0m"
   echo -e "Board: \033[1;37m${BOARD}\033[0m"
   echo -e "Memory: \033[1;37m${RAMTOTAL}GB\033[0m"
   echo -e "Governor: \033[1;37m${GOVERNOR:-performance}\033[0m"

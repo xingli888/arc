@@ -283,7 +283,7 @@ if [ "${DIRECTBOOT}" = "true" ] || echo "parallels xen" | grep -qw "${MEV:-physi
   grub-editenv "${USER_RSYSENVFILE}" set dsm_version="${PRODUCTVER} (${BUILDNUM}$([ ${SMALLNUM:-0} -ne 0 ] && echo "u${SMALLNUM}"))"
   grub-editenv "${USER_RSYSENVFILE}" set dsm_kernel="${KERNEL} (${KVER})"
   grub-editenv "${USER_RSYSENVFILE}" set sys_mev="${MEV:-physical}"
-  grub-editenv "${USER_RSYSENVFILE}" set sys_cpu="${CPU} (${CPUCNT} threads)"
+  grub-editenv "${USER_RSYSENVFILE}" set sys_cpu="${CPU} (Cores: ${CPUCNT} | Threads: ${CPUCHT})"
   grub-editenv "${USER_RSYSENVFILE}" set sys_board="${BOARD}"
   grub-editenv "${USER_RSYSENVFILE}" set sys_mem="${RAMTOTAL} GiB"
 
@@ -330,11 +330,16 @@ else
   _bootwait || exit 0
   
   # Unload all network drivers
-  for F in $(realpath /sys/class/net/*/device/driver); do [ ! -e "${F}" ] && continue; rmmod -f "$(basename ${F})" 2>/dev/null || true; done
+  for F in $(realpath /sys/class/net/*/device/driver); do [ ! -e "${F}" ] && continue; modprobe -r "$(basename ${F})" 2>/dev/null || true; done
+
+  umount -fa 2>/dev/null
+  # sh -c 'echo 3 >/proc/sys/vm/drop_caches'
+  sync
+  sleep 3
 
   KERNELLOAD="$(readConfigKey "kernelload" "${USER_CONFIG_FILE}")"
   [ -z "${KERNELLOAD}" ] && KERNELLOAD="kexec"
-  [ "${KERNELLOAD}" = "kexec" ] && { sync; kexec -e; } || poweroff
   echo -e "\033[1;37mBooting DSM...\033[0m"
+  [ "${KERNELLOAD}" = "kexec" ] && kexec -e || poweroff
   exit 0
 fi

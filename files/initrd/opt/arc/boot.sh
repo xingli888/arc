@@ -156,7 +156,6 @@ ETHN=0
 for N in ${ETHX}; do
   MAC="$(readConfigKey "${N}" "${USER_CONFIG_FILE}")"
   [ -z "${MAC}" ] && MAC="$(cat /sys/class/net/${N}/address 2>/dev/null | sed 's/://g' | tr '[:upper:]' '[:lower:]')"
-  CMDLINE["R${N}"]="$(cat /sys/class/net/${N}/address 2>/dev/null | sed 's/://g' | tr '[:upper:]' '[:lower:]')"
   CMDLINE["mac$((++ETHN))"]="${MAC}"
 done
 CMDLINE['netif_num']="${ETHN}"
@@ -330,6 +329,9 @@ else
   echo -e "\033[1;37mLoading DSM Kernel...\033[0m"
   _bootwait || exit 0
   
+  # Unload all network drivers
+  for F in $(realpath /sys/class/net/*/device/driver); do [ ! -e "${F}" ] && continue; rmmod -f "$(basename ${F})" 2>/dev/null || true; done
+
   KERNELLOAD="$(readConfigKey "kernelload" "${USER_CONFIG_FILE}")"
   [ -z "${KERNELLOAD}" ] && KERNELLOAD="kexec"
   [ "${KERNELLOAD}" = "kexec" ] && { sync; kexec -e; } || poweroff

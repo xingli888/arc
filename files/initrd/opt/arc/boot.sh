@@ -325,7 +325,7 @@ else
   fi
 
   # Executes DSM kernel via KEXEC
-  kexec -l "${MOD_ZIMAGE_FILE}" --initrd "${MOD_RDGZ_FILE}" --command-line="${CMDLINE_LINE}" >"${LOG_FILE}" 2>&1 || die "Failed to load DSM Kernel!"
+  kexec -a -l "${MOD_ZIMAGE_FILE}" --initrd "${MOD_RDGZ_FILE}" --command-line="${CMDLINE_LINE} kexecboot" >"${LOG_FILE}" 2>&1 || die "Failed to load DSM Kernel!"
 
   for T in $(busybox w 2>/dev/null | grep -v 'TTY' | awk '{print $2}'); do
     if [ -w "/dev/${T}" ]; then
@@ -337,11 +337,11 @@ else
   echo -e "\033[1;37mLoading DSM Kernel...\033[0m"
   _bootwait || exit 0
   
-  # Unload all network drivers
-  for F in $(realpath /sys/class/net/*/device/driver); do [ ! -e "${F}" ] && continue; modprobe -r "$(basename ${F})" 2>/dev/null || true; done
-
-  umount -fa 2>/dev/null
+  # Unload all network drivers and partitions
+  # for F in $(realpath /sys/class/net/*/device/driver); do [ ! -e "${F}" ] && continue; modprobe -r "$(basename ${F})" 2>/dev/null || true; done
+  # umount -fa 2>/dev/null
   # sh -c 'echo 3 >/proc/sys/vm/drop_caches'
+
   sync
   sleep 3
 
